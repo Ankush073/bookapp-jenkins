@@ -1,0 +1,34 @@
+# Conversion to YAML from Properties formar report
+# Warnings:
+# - The yaml file had comments which are lost in the refactoring!
+spring:
+  application:
+    name: Day_16_07_26_springboot
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  datasource:
+    url: jdbc:mysql://localhost:3306/coforgedb
+    username: root
+    password: Ankush!1@2#3$4
+  profiles:
+    active: Prod
+server:
+  port: 8081
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+      base-path: /actuator
+logging:
+  level:
+    root: INFO
+    com:
+      coforge: DEBUG
+  file:
+    name: log/app.log
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss} %-5level {%thread} %logger{36} -%msg%n'
+    file: '%d{yyyy-MM-dd HH:mm:ss} %-5level {%thread} %logger{36} -%msg%n'
