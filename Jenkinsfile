@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     /*
-     * Since Jenkins currently runs on your Mac and GitHub cannot call
-     * localhost directly, Jenkins checks GitHub periodically.
+     * Jenkins is running locally on Windows.
+     * GitHub cannot directly call localhost, so Jenkins polls GitHub.
      */
     triggers {
         pollSCM('H/2 * * * *')
@@ -34,19 +34,16 @@ pipeline {
 
         stage('Build Spring Boot') {
             steps {
-                sh '''
-                    chmod +x mvnw
-                    ./mvnw clean package -DskipTests
-                '''
+                bat 'mvnw.cmd clean package -DskipTests'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    docker build \
-                      -t ${DOCKER_IMAGE}:${BUILD_NUMBER} \
-                      -t ${DOCKER_IMAGE}:latest \
+                bat '''
+                    docker build ^
+                      -t %DOCKER_IMAGE%:%BUILD_NUMBER% ^
+                      -t %DOCKER_IMAGE%:latest ^
                       .
                 '''
             }
@@ -61,14 +58,13 @@ pipeline {
                         passwordVariable: 'DOCKER_PASSWORD'
                     )
                 ]) {
-                    sh '''
-                        echo "$DOCKER_PASSWORD" |
-                        docker login \
-                          --username "$DOCKER_USERNAME" \
+                    bat '''
+                        echo %DOCKER_PASSWORD% | docker login ^
+                          --username %DOCKER_USERNAME% ^
                           --password-stdin
 
-                        docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
-                        docker push ${DOCKER_IMAGE}:latest
+                        docker push %DOCKER_IMAGE%:%BUILD_NUMBER%
+                        docker push %DOCKER_IMAGE%:latest
                     '''
                 }
             }
@@ -76,9 +72,10 @@ pipeline {
 
         stage('Deploy MySQL') {
             steps {
-                sh '''
-                    kubectl apply -f ${MYSQL_MANIFEST}
-                    kubectl rollout status deployment/mysql-deployment \
+                bat '''
+                    kubectl apply -f %MYSQL_MANIFEST%
+
+                    kubectl rollout status deployment/mysql-deployment ^
                       --timeout=180s
                 '''
             }
@@ -86,15 +83,15 @@ pipeline {
 
         stage('Deploy Book Application') {
             steps {
-                sh '''
-                    kubectl apply -f ${BOOK_MANIFEST}
+                bat '''
+                    kubectl apply -f %BOOK_MANIFEST%
 
-                    kubectl set image \
-                      deployment/${K8S_DEPLOYMENT} \
-                      ${K8S_CONTAINER}=${DOCKER_IMAGE}:${BUILD_NUMBER}
+                    kubectl set image ^
+                      deployment/%K8S_DEPLOYMENT% ^
+                      %K8S_CONTAINER%=%DOCKER_IMAGE%:%BUILD_NUMBER%
 
-                    kubectl rollout status \
-                      deployment/${K8S_DEPLOYMENT} \
+                    kubectl rollout status ^
+                      deployment/%K8S_DEPLOYMENT% ^
                       --timeout=300s
                 '''
             }
@@ -102,17 +99,17 @@ pipeline {
 
         stage('Verify Deployment') {
             steps {
-                sh '''
-                    echo "===== Kubernetes node ====="
+                bat '''
+                    echo ===== Kubernetes node =====
                     kubectl get nodes
 
-                    echo "===== Deployments ====="
+                    echo ===== Deployments =====
                     kubectl get deployments
 
-                    echo "===== Pods ====="
+                    echo ===== Pods =====
                     kubectl get pods
 
-                    echo "===== Services ====="
+                    echo ===== Services =====
                     kubectl get services
                 '''
             }
@@ -129,7 +126,7 @@ pipeline {
         }
 
         always {
-            sh 'docker logout || true'
+            bat 'docker logout'
         }
     }
 }
